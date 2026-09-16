@@ -671,6 +671,14 @@
   el('title', { id: 'mm-title' }, svg, '마인드맵');
   el('desc', { id: 'mm-desc' }, svg, '이용수라는 중심 주제에서 아래로 뻗어나가는 브랜치형 마인드맵. 세부 항목을 클릭하면 관련 내용으로 이동합니다.');
 
+  // offsetParent만으로는 폭이 0인 과도기 상태(레이아웃 리플로우 중)를 걸러내지
+  // 못하므로, 실제 렌더된 크기까지 함께 확인해 "그릴 수 있는 상태인지" 판단한다.
+  function svgMapVisible() {
+    if (svg.offsetParent === null) return false;
+    var r = svg.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  }
+
   var linesLayer = el('g', {}, svg);
   var nodesLayer = el('g', {}, svg);
 
@@ -772,7 +780,7 @@
 
   // direction: 'down' — 중심에서 헤더 쪽으로(세부 항목 클릭) / 'up' — 헤더에서 중심 쪽으로(헤더 클릭)
   function highlightPath(i, j, direction) {
-    if (svg.offsetParent === null) return; // 회전 애니메이션 도중 모바일 폭으로 리사이즈된 경우
+    if (!svgMapVisible()) return; // 회전 애니메이션 도중 모바일 폭으로 리사이즈된 경우
     var pts = buildTracePoints(i, j);
     // 레이아웃이 아직 잡히지 않았으면 좌표에 NaN이 섞일 수 있다.
     // 그대로 두면 getTotalLength()에서 터지므로 조용히 건너뛴다.
@@ -813,7 +821,7 @@
   // 상태라면 경로만 새 좌표로 다시 그려준다(애니메이션 없이 즉시).
   function refreshHighlightGeometry() {
     if (!activeHighlight || activeBranchIndex === null || activeLeafIndex === null) return;
-    if (svg.offsetParent === null) {
+    if (!svgMapVisible()) {
       // 모바일 아코디언 뷰로 좁아져 마인드맵 SVG가 숨겨지면 root/branch/leaf
       // 좌표가 전부 (0,0)으로 읽혀 강조선이 화면 구석으로 튀어 보인다.
       // 그릴 수 없는 상태이므로 차라리 지운다 — 리사이즈로 다시 넓어지면
@@ -844,7 +852,7 @@
 
   function goToContent(i, j) {
     var target0 = document.getElementById('content-' + i + '-' + j);
-    if (svg.offsetParent === null) {
+    if (!svgMapVisible()) {
       // 모바일 아코디언 뷰에서는 SVG가 숨겨져 있어 위치 계산이 의미 없으므로
       // 회전·강조선 애니메이션 없이 스크롤·포커스·breadcrumb만 처리한다.
       if (target0) {
@@ -1170,11 +1178,23 @@
   }
 
   requestAnimationFrame(layoutLeaderLines);
-  var resizeTimer;
-  window.addEventListener('resize', function () {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(layoutLeaderLines, 150);
-  });
+  // 150ms 디바운스는 리사이즈 도중 파란 강조선이 눈에 띄게 뒤처져 보이게 만들었다.
+  // 대신 프레임당 한 번만 실행되도록 rAF로 스케줄링해 화면이 바뀌는 것과 거의 동시에 따라가게 한다.
+  var layoutScheduled = false;
+  function scheduleLayoutLeaderLines() {
+    if (layoutScheduled) return;
+    layoutScheduled = true;
+    requestAnimationFrame(function () {
+      layoutScheduled = false;
+      layoutLeaderLines();
+    });
+  }
+  window.addEventListener('resize', scheduleLayoutLeaderLines);
+  if (typeof ResizeObserver !== 'undefined') {
+    // 창 크기뿐 아니라 마인드맵 컨테이너 자체의 레이아웃이 바뀌는 경우(글꼴 로드,
+    // 콘텐츠 리플로우 등)도 함께 잡아낸다.
+    new ResizeObserver(scheduleLayoutLeaderLines).observe(document.getElementById('mindmap-root'));
+  }
 })();
 </script>
 
