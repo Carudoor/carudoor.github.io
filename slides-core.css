@@ -176,7 +176,15 @@
 }
 
 @media (max-width: 720px) {
-  .deck .deck-arrow { display: none; }
+  .deck .deck-arrow {
+    top: auto;
+    bottom: 10px;
+    transform: none;
+    width: 48px;
+    height: 48px;
+  }
+  .deck .deck-prev { left: calc(50% - 54px); }
+  .deck .deck-next, .deck.has-dots .deck-next { right: calc(50% - 54px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .deck .deck-progress-fill { transition: none; }

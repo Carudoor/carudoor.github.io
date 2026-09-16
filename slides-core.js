@@ -182,7 +182,12 @@ function mountSlideDeck(root, options) {
 
   function render() {
     slides.forEach(function (s, i) {
-      s.classList.toggle('active', i === current);
+      var isCurrent = i === current;
+      s.classList.toggle('active', isCurrent);
+      s.hidden = !isCurrent;
+      s.setAttribute('aria-hidden', String(!isCurrent));
+      if (isCurrent) s.setAttribute('aria-current', 'true');
+      else s.removeAttribute('aria-current');
     });
     dots.forEach(function (d, i) { d.classList.toggle('active', i === current); });
     if (progressFill) {
