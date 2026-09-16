@@ -772,6 +772,7 @@
 
   // direction: 'down' — 중심에서 헤더 쪽으로(세부 항목 클릭) / 'up' — 헤더에서 중심 쪽으로(헤더 클릭)
   function highlightPath(i, j, direction) {
+    if (svg.offsetParent === null) return; // 회전 애니메이션 도중 모바일 폭으로 리사이즈된 경우
     var pts = buildTracePoints(i, j);
     // 레이아웃이 아직 잡히지 않았으면 좌표에 NaN이 섞일 수 있다.
     // 그대로 두면 getTotalLength()에서 터지므로 조용히 건너뛴다.
