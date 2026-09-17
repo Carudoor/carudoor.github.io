@@ -124,6 +124,13 @@
     stroke-dasharray: 4 4;
     opacity: 0.35;
   }
+  .mm-spine-fill,
+  .mm-mobile-track-fill {
+    stroke: var(--mm-accent);
+    stroke-width: 1.5;
+    opacity: 0.55;
+    transition: y2 0.3s ease, opacity 0.2s ease;
+  }
   .mm-spine-dot {
     stroke: #fafafa;
     stroke-width: 1.5;
@@ -338,6 +345,7 @@
     body { padding-top: 1.5rem; }
     .mindmap svg { display: none; }
     .mm-spine,
+    .mm-spine-fill,
     .mm-spine-dot,
     .mm-trace { display: none; }
     .mindmap-list { display: block; border-top: 1px solid var(--mm-line); }
@@ -352,6 +360,7 @@
 
   @media (min-width: 601px) {
     .mm-mobile-track,
+    .mm-mobile-track-fill,
     .mm-mobile-scroll-dot { display: none; }
   }
 
@@ -363,6 +372,8 @@
     .mm-connector,
     .mm-spine-dot,
     .mm-scroll-dot,
+    .mm-spine-fill,
+    .mm-mobile-track-fill,
     .mm-mobile-scroll-dot,
     .mm-trace {
       transition: none !important;
@@ -766,6 +777,7 @@
   document.getElementById('mindmap-root').appendChild(listView);
   var overlay = document.getElementById('mm-leader-overlay');
   var spineLine = el('path', { class: 'mm-spine' }, overlay);
+  var spineFill = el('line', { class: 'mm-spine-fill', visibility: 'hidden' }, overlay);
   // 클릭할 때마다 새로 그려지는 강조선(중심 ↔ 헤더). 미리 그려두지 않고,
   // 클릭 시 방향에 맞춰 경로를 만든 뒤 stroke-dashoffset으로 "그어지는" 애니메이션을 준다.
   var traceEl = el('path', { class: 'mm-trace' }, overlay);
@@ -774,10 +786,13 @@
     class: 'mm-scroll-dot', r: 3.25, visibility: 'hidden'
   }, overlay);
   var mobileTrack = el('path', { class: 'mm-mobile-track' }, overlay);
+  var mobileTrackFill = el('line', { class: 'mm-mobile-track-fill', visibility: 'hidden' }, overlay);
   var mobileScrollDot = el('circle', {
     class: 'mm-mobile-scroll-dot', r: 3.25, visibility: 'hidden'
   }, overlay);
   var mobileTrackX = null;
+  var mobileTrackStartY = null;
+  var spineMinY = null;
   var scrollCurrentSection = null;
 
   var currentOrder = [];
@@ -844,7 +859,12 @@
 
   function layoutMobileTrack() {
     var marks = contentContainer.querySelectorAll('.mm-section-header .mm-current-mark');
-    if (!marks.length) return;
+    if (!marks.length) {
+      mobileTrackX = null;
+      mobileTrackStartY = null;
+      mobileTrackFill.setAttribute('visibility', 'hidden');
+      return;
+    }
 
     // 마크 정중앙을 그대로 쓴다 — 예전엔 이게 본문 칼럼 "안쪽" 좌표라
     // .mm-section의 불투명 배경에 가려질까봐 여백 쪽으로 옮겼었는데,
@@ -854,6 +874,7 @@
     var firstPoint = pointOf(marks[0]);
     var lastPoint = pointOf(marks[marks.length - 1]);
     mobileTrackX = firstPoint[0];
+    mobileTrackStartY = firstPoint[1];
     mobileTrack.setAttribute('d', 'M ' + mobileTrackX + ' ' + firstPoint[1] + ' L ' + mobileTrackX + ' ' + lastPoint[1]);
   }
 
@@ -1259,11 +1280,16 @@
 
       var cy = Number(sourceDot.getAttribute('cy'));
       var spineX = getSpineX();
-      if (!isFinite(cy) || !isFinite(spineX)) return;
+      if (!isFinite(cy) || !isFinite(spineX) || !isFinite(spineMinY)) return;
 
       scrollProgressDot.setAttribute('cx', spineX);
       scrollProgressDot.setAttribute('cy', cy);
       scrollProgressDot.setAttribute('visibility', 'visible');
+      spineFill.setAttribute('x1', spineX);
+      spineFill.setAttribute('y1', spineMinY);
+      spineFill.setAttribute('x2', spineX);
+      spineFill.setAttribute('y2', cy);
+      spineFill.setAttribute('visibility', 'visible');
       return;
     }
 
@@ -1271,13 +1297,18 @@
     var mark = header && header.querySelector('.mm-current-mark');
     if (!mark) return;
 
-    if (!isFinite(mobileTrackX)) layoutMobileTrack();
-    if (!isFinite(mobileTrackX)) return;
+    if (!isFinite(mobileTrackX) || !isFinite(mobileTrackStartY)) layoutMobileTrack();
+    if (!isFinite(mobileTrackX) || !isFinite(mobileTrackStartY)) return;
 
     var markPoint = pointOf(mark);
     mobileScrollDot.setAttribute('cx', mobileTrackX);
     mobileScrollDot.setAttribute('cy', markPoint[1]);
     mobileScrollDot.setAttribute('visibility', 'visible');
+    mobileTrackFill.setAttribute('x1', mobileTrackX);
+    mobileTrackFill.setAttribute('y1', mobileTrackStartY);
+    mobileTrackFill.setAttribute('x2', mobileTrackX);
+    mobileTrackFill.setAttribute('y2', markPoint[1]);
+    mobileTrackFill.setAttribute('visibility', 'visible');
   }
 
   function setupScrollProgressObserver() {
@@ -1350,6 +1381,7 @@
       }
     }
 
+    spineMinY = minY;
     spineLine.setAttribute('d', 'M ' + spineX + ' ' + minY + ' L ' + spineX + ' ' + maxY);
 
     // 노드/헤더가 움직였으므로 떠 있는 강조선도 새 좌표로 맞춘다.
