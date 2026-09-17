@@ -6,7 +6,7 @@
 <title>이용수</title>
 <meta name="description" content="이용수 개인 홈페이지 — 단국대학교 도시계획학과, STL CAD 모델 3D 뷰어와 프로젝트 발표자료.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%232c2c2a'/><circle cx='16' cy='16' r='5' fill='%232563eb'/></svg>">
-<link rel="stylesheet" href="slides-core.css?v=2">
+<link rel="stylesheet" href="slides-core.css?v=3">
 <style>
   :root {
     --mm-text: #1f2937;
@@ -47,6 +47,11 @@
     color: var(--mm-text-secondary);
     font-size: 0.95rem;
   }
+  .skip-link { position: fixed; left: 1rem; top: 1rem; z-index: 100; transform: translateY(-160%); padding: 10px 14px; color: #fff; background: var(--mm-root-fill); border-radius: 6px; }
+  .skip-link:focus { transform: translateY(0); }
+  .site-nav { margin-top: 1rem; display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
+  .site-nav a { color: var(--mm-accent); padding: 8px 10px; text-decoration: none; border-radius: 5px; }
+  .site-nav a:hover, .site-nav a:focus-visible { background: #e8efff; outline: 2px solid var(--mm-accent); outline-offset: 1px; }
 
   .mindmap {
     width: 100%;
@@ -59,6 +64,7 @@
     height: auto;
     display: block;
   }
+  .mindmap-list { display: none; }
   .mm-branch, .mm-leaf {
     cursor: pointer;
   }
@@ -214,7 +220,8 @@
   .model-preview {
     position: relative;
     width: 100%;
-    height: 260px;
+    aspect-ratio: 16 / 9;
+    min-height: clamp(180px, 42vw, 260px);
     border-radius: 8px;
     overflow: hidden;
     background: radial-gradient(ellipse at 50% 30%, #131722 0%, #0b0d12 70%);
@@ -249,12 +256,17 @@
     color: rgba(255, 255, 255, 0.55);
     pointer-events: none;
   }
+  .model-preview-controls { position: absolute; left: 10px; bottom: 8px; z-index: 2; }
+  .model-preview-controls button { min-width: 44px; min-height: 44px; color: #fff; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.55); border-radius: 5px; cursor: pointer; }
+  .model-preview-error { pointer-events: auto; flex-direction: column; gap: 10px; }
+  .model-preview-error a, .model-preview-error button { color: #fff; background: transparent; border: 1px solid rgba(255,255,255,.7); padding: 8px 10px; border-radius: 5px; }
 
   /* "프로젝트" 항목 안에 들어가는 슬라이드 덱. 바깥 상자 크기만 정하고
      내부 스타일은 slides-core.css가 담당한다. */
   .deck-card {
     width: 100%;
-    height: 300px;
+    aspect-ratio: 16 / 10;
+    min-height: clamp(220px, 52vw, 300px);
     border-radius: 8px;
     border: 1px solid var(--mm-line);
     margin-bottom: 12px;
@@ -269,6 +281,20 @@
     color: var(--mm-text-secondary);
     font-size: 0.85rem;
     text-align: center;
+  }
+  .mm-breadcrumb { margin: 0 0 -.5rem; color: var(--mm-text-secondary); font-size: .9rem; min-height: 1.4em; }
+  .mm-breadcrumb[hidden] { display: none; }
+  @media (max-width: 600px) {
+    body { padding-top: 1.5rem; }
+    .mindmap svg { display: none; }
+    .mindmap-list { display: block; border-top: 1px solid var(--mm-line); }
+    .mindmap-list details { border-bottom: 1px solid var(--mm-line); }
+    .mindmap-list summary { min-height: 44px; display: flex; align-items: center; padding: 10px 4px; cursor: pointer; font-weight: 600; }
+    .mindmap-list summary::after { content: '펼치기'; margin-left: auto; color: var(--mm-text-secondary); font-size: .8rem; font-weight: 400; }
+    .mindmap-list details[open] summary::after { content: '접기'; }
+    .mindmap-list ul { list-style: none; margin: 0; padding: 0 0 8px; }
+    .mindmap-list a { display: flex; align-items: center; min-height: 44px; padding: 8px 10px 8px 20px; color: var(--mm-text); text-decoration: none; }
+    .mindmap-list a::before { content: '→'; margin-right: 8px; color: var(--mm-accent); }
   }
 
   /* 모션 최소화 설정에서는 JS(스크롤·회전·선 그리기)뿐 아니라
@@ -285,10 +311,16 @@
 </style>
 </head>
 <body>
+<a class="skip-link" href="#mm-content">본문으로 건너뛰기</a>
 
 <header class="site-header">
   <h1>이용수</h1>
   <p>개인 홈페이지에 오신 것을 환영합니다. 아래 마인드맵의 항목을 눌러보세요.</p>
+  <nav class="site-nav" aria-label="주요 섹션">
+    <a href="#content-0-0">소개</a>
+    <a href="#content-1-0">3D 모델·프로젝트</a>
+    <a href="#content-2-0">대외·개인활동</a>
+  </nav>
 </header>
 
 <svg id="mm-leader-overlay" aria-hidden="true"></svg>
@@ -328,7 +360,7 @@
      아래 인라인 스크립트보다는 먼저 실행되어야 하므로 순서는 유지. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="stl-core.js?v=1"></script>
-<script src="slides-core.js?v=2"></script>
+<script src="slides-core.js?v=3"></script>
 <script>
 (function () {
   var NS = 'http://www.w3.org/2000/svg';
@@ -348,6 +380,7 @@
             '<div class="model-preview">' +
               '<div class="model-preview-status">모델 불러오는 중…</div>' +
               '<div class="model-preview-hint">드래그 · 회전 &nbsp;/&nbsp; 스크롤 · 확대</div>' +
+              '<div class="model-preview-controls"><button type="button" class="model-preview-toggle" aria-pressed="false">자동회전 일시정지</button></div>' +
             '</div>' +
             '<p style="margin:0 0 10px;">STL 3D 모델을 홀로그램 스타일로 볼 수 있는 뷰어입니다.</p>' +
             '<a href="viewer.html" class="mm-link-btn">전체 뷰어 열기 →</a>';
@@ -413,6 +446,9 @@
   // ---------------------------------------------------------------
   function initModelPreview(container, statusEl) {
     if (!container || typeof THREE === 'undefined') return;
+    container.setAttribute('role', 'region');
+    container.setAttribute('aria-label', '회전 가능한 3D 도시 모델 미리보기');
+    if (statusEl) { statusEl.setAttribute('role', 'status'); statusEl.setAttribute('aria-live', 'polite'); }
 
     var scene = new THREE.Scene();
     var camera = new THREE.PerspectiveCamera(40, container.clientWidth / container.clientHeight, 0.1, 1000);
@@ -420,6 +456,8 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
     container.appendChild(renderer.domElement);
+    renderer.domElement.setAttribute('aria-label', '3D 도시 모델 캔버스. 드래그하여 회전하고 스크롤하여 확대합니다.');
+    renderer.domElement.setAttribute('role', 'img');
 
     scene.add(new THREE.AmbientLight(0x8899aa, 1.1));
     var keyLight = new THREE.DirectionalLight(0xffffff, 1.0);
@@ -434,7 +472,9 @@
 
     // 모델 파일은 파일명이 곧 버전이라 브라우저 캐시를 그대로 쓴다
     // (no-store로 두면 재방문마다 통째로 다시 받는다).
-    fetch('stl/small-city.stl')
+    function loadModel() {
+      if (statusEl) { statusEl.classList.remove('model-preview-error'); statusEl.textContent = '모델 불러오는 중…'; statusEl.style.display = ''; }
+      fetch('stl/small-city.stl')
       .then(function (res) {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.arrayBuffer();
@@ -463,14 +503,28 @@
       })
       .catch(function (err) {
         console.error(err);
-        if (statusEl) statusEl.textContent = '모델을 불러올 수 없습니다.';
+        if (statusEl) {
+          statusEl.classList.add('model-preview-error');
+          statusEl.innerHTML = '모델을 불러올 수 없습니다.<span><button type="button" class="model-preview-retry">다시 시도</button> <a href="viewer.html">전체 화면 뷰어</a></span>';
+          statusEl.querySelector('.model-preview-retry').addEventListener('click', loadModel);
+        }
       });
+    }
+    loadModel();
 
     var spherical = { radius: 7, theta: 0.6, phi: 1.15 };
     var target = new THREE.Vector3(0, 0.3, 0);
     var isDragging = false;
     var lastX = 0, lastY = 0;
     var autoRotate = true;
+    var isRotationPaused = false;
+    var rotateToggle = container.querySelector('.model-preview-toggle');
+    if (rotateToggle) rotateToggle.addEventListener('click', function () {
+      isRotationPaused = !isRotationPaused;
+      rotateToggle.setAttribute('aria-pressed', String(isRotationPaused));
+      rotateToggle.textContent = isRotationPaused ? '자동회전 재개' : '자동회전 일시정지';
+      if (statusEl) { statusEl.style.display = ''; statusEl.textContent = isRotationPaused ? '자동회전을 일시정지했습니다.' : '자동회전을 재개했습니다.'; setTimeout(function () { if (!statusEl.classList.contains('model-preview-error')) statusEl.style.display = 'none'; }, 1200); }
+    });
 
     function updateCameraFromSpherical() {
       var r = spherical.radius, t = spherical.theta, p = spherical.phi;
@@ -554,7 +608,7 @@
 
     function animate() {
       requestAnimationFrame(animate);
-      if (autoRotate && !isDragging) {
+      if (autoRotate && !isDragging && !isRotationPaused) {
         spherical.theta += 0.0025;
         updateCameraFromSpherical();
       }
@@ -617,6 +671,14 @@
   el('title', { id: 'mm-title' }, svg, '마인드맵');
   el('desc', { id: 'mm-desc' }, svg, '이용수라는 중심 주제에서 아래로 뻗어나가는 브랜치형 마인드맵. 세부 항목을 클릭하면 관련 내용으로 이동합니다.');
 
+  // offsetParent만으로는 폭이 0인 과도기 상태(레이아웃 리플로우 중)를 걸러내지
+  // 못하므로, 실제 렌더된 크기까지 함께 확인해 "그릴 수 있는 상태인지" 판단한다.
+  function svgMapVisible() {
+    if (svg.offsetParent === null) return false;
+    var r = svg.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  }
+
   var linesLayer = el('g', {}, svg);
   var nodesLayer = el('g', {}, svg);
 
@@ -630,6 +692,15 @@
   var headerEls = [], spineDots = [];
   var branchGEls = [], childrenGEls = [];
   var contentContainer = document.getElementById('mm-content');
+  contentContainer.setAttribute('tabindex', '-1');
+  var breadcrumb = document.createElement('p');
+  breadcrumb.className = 'mm-breadcrumb';
+  breadcrumb.hidden = true;
+  contentContainer.parentNode.insertBefore(breadcrumb, contentContainer);
+  var listView = document.createElement('div');
+  listView.className = 'mindmap-list';
+  listView.setAttribute('aria-label', '마인드맵 목록');
+  document.getElementById('mindmap-root').appendChild(listView);
   var overlay = document.getElementById('mm-leader-overlay');
   var spineLine = el('path', { class: 'mm-spine' }, overlay);
   // 클릭할 때마다 새로 그려지는 강조선(중심 ↔ 헤더). 미리 그려두지 않고,
@@ -651,6 +722,21 @@
   var activeBranchIndex = null;
   var activeLeafIndex = null;
   var activeSpineDot = null;
+
+  function setChildrenState(i, open) {
+    var group = childrenGEls[i], branch = branchGEls[i];
+    if (!group || !branch) return;
+    group.classList.toggle('open', open);
+    group.setAttribute('aria-hidden', String(!open));
+    branch.setAttribute('aria-expanded', String(open));
+    branch.setAttribute('aria-label', data.children[i].label + (open ? ' 세부 항목 접기' : ' 세부 항목 펼치기'));
+    Array.prototype.forEach.call(group.querySelectorAll('.mm-leaf'), function (leaf) { leaf.setAttribute('tabindex', open ? '0' : '-1'); });
+  }
+
+  function showBreadcrumb(i, j) {
+    breadcrumb.textContent = data.children[i].label + ' › ' + data.children[i].children[j].label;
+    breadcrumb.hidden = false;
+  }
 
   function clearHighlight() {
     if (!activeHighlight) return;
@@ -694,6 +780,7 @@
 
   // direction: 'down' — 중심에서 헤더 쪽으로(세부 항목 클릭) / 'up' — 헤더에서 중심 쪽으로(헤더 클릭)
   function highlightPath(i, j, direction) {
+    if (!svgMapVisible()) return; // 회전 애니메이션 도중 모바일 폭으로 리사이즈된 경우
     var pts = buildTracePoints(i, j);
     // 레이아웃이 아직 잡히지 않았으면 좌표에 NaN이 섞일 수 있다.
     // 그대로 두면 getTotalLength()에서 터지므로 조용히 건너뛴다.
@@ -734,6 +821,14 @@
   // 상태라면 경로만 새 좌표로 다시 그려준다(애니메이션 없이 즉시).
   function refreshHighlightGeometry() {
     if (!activeHighlight || activeBranchIndex === null || activeLeafIndex === null) return;
+    if (!svgMapVisible()) {
+      // 모바일 아코디언 뷰로 좁아져 마인드맵 SVG가 숨겨지면 root/branch/leaf
+      // 좌표가 전부 (0,0)으로 읽혀 강조선이 화면 구석으로 튀어 보인다.
+      // 그릴 수 없는 상태이므로 차라리 지운다 — 리사이즈로 다시 넓어지면
+      // 다음 클릭 때 정상 좌표로 새로 그려진다.
+      clearHighlight();
+      return;
+    }
     var pts = buildTracePoints(activeBranchIndex, activeLeafIndex);
     if (!pts.every(function (p) { return isFinite(p[0]) && isFinite(p[1]); })) return;
     traceEl.setAttribute('d', 'M ' + pts.map(function (p) { return p[0] + ' ' + p[1]; }).join(' L '));
@@ -756,24 +851,41 @@
   }
 
   function goToContent(i, j) {
+    var target0 = document.getElementById('content-' + i + '-' + j);
+    if (!svgMapVisible()) {
+      // 모바일 아코디언 뷰에서는 SVG가 숨겨져 있어 위치 계산이 의미 없으므로
+      // 회전·강조선 애니메이션 없이 스크롤·포커스·breadcrumb만 처리한다.
+      if (target0) {
+        scrollElementToCenter(target0);
+        showBreadcrumb(i, j);
+        target0.setAttribute('tabindex', '-1');
+        target0.focus({ preventScroll: true });
+      }
+      return;
+    }
     var needsMove = currentOrder.indexOf(i) !== 0 || childOrders[i].indexOf(j) !== 0;
     clearHighlightThen(needsMove, function () {
       // 회전과 스크롤을 동시에 진행하고, 회전이 끝나면 중심에서 헤더 방향으로 선을 그린다.
       var target = document.getElementById('content-' + i + '-' + j);
-      if (target) scrollElementToCenter(target);
+      if (target) {
+        scrollElementToCenter(target);
+        showBreadcrumb(i, j);
+        target.setAttribute('tabindex', '-1');
+        target.focus({ preventScroll: true });
+      }
       moveToLeftmost(i, j, function () { highlightPath(i, j, 'down'); });
     });
   }
 
   function goToMap(i, j) {
+    breadcrumb.hidden = true;
     if (childrenGEls[i] && !childrenGEls[i].classList.contains('open')) {
-      childrenGEls[i].classList.add('open');
-      if (branchGEls[i]) branchGEls[i].setAttribute('aria-expanded', 'true');
+      setChildrenState(i, true);
     }
     var needsMove = currentOrder.indexOf(i) !== 0 || childOrders[i].indexOf(j) !== 0;
     clearHighlightThen(needsMove, function () {
       scrollElementToTop(document.getElementById('mindmap-root'));
-      moveToLeftmost(i, j, function () { highlightPath(i, j, 'up'); });
+      moveToLeftmost(i, j, function () { highlightPath(i, j, 'up'); if (leafCircles[i] && leafCircles[i][j]) leafCircles[i][j].parentNode.focus({ preventScroll: true }); });
     });
   }
 
@@ -885,7 +997,7 @@
     headerEls[i] = [];
     spineDots[i] = [];
 
-    var childrenG = el('g', { class: 'mm-children', id: 'mm-children-' + i }, nodesLayer);
+    var childrenG = el('g', { class: 'mm-children', id: 'mm-children-' + i, 'aria-hidden': 'true' }, nodesLayer);
     childrenGEls[i] = childrenG;
 
     var branchG = el('g', {
@@ -893,7 +1005,8 @@
       tabindex: '0',
       role: 'button',
       'aria-expanded': 'false',
-      'aria-label': branch.label + ' 브랜치, 세부 항목 펼치기'
+      'aria-controls': 'mm-children-' + i,
+      'aria-label': branch.label + ' 세부 항목 펼치기'
     }, nodesLayer);
     branchGEls[i] = branchG;
     branchDots[i] = el('circle', { class: 'mm-dot', cx: x2, cy: y2, r: dotR2, fill: branch.color }, branchG);
@@ -917,7 +1030,7 @@
 
       var leafG = el('g', {
         class: 'mm-leaf',
-        tabindex: '0',
+        tabindex: '-1',
         role: 'button',
         'aria-label': child.label + ' 항목, 관련 내용으로 이동'
       }, childrenG);
@@ -977,15 +1090,13 @@
       }
 
       if (isOpen) {
-        childrenG.classList.remove('open');
-        branchG.setAttribute('aria-expanded', 'false');
+        setChildrenState(i, false);
         // 닫히는 브랜치에 활성화된 안내선이 걸려 있었다면 함께 정리해 선이 끊긴 채 남지 않게 한다.
         if (activeBranchIndex === i) clearHighlight();
         return;
       }
 
-      childrenG.classList.add('open');
-      branchG.setAttribute('aria-expanded', 'true');
+      setChildrenState(i, true);
     }
     branchG.addEventListener('click', toggle);
     branchG.addEventListener('keydown', function (e) {
@@ -997,6 +1108,34 @@
   });
 
   document.getElementById('mindmap-root').appendChild(svg);
+
+  // The compact view uses the same data tree, while the SVG remains available on wider screens.
+  data.children.forEach(function (branch, i) {
+    var details = document.createElement('details');
+    var summary = document.createElement('summary');
+    summary.textContent = branch.label;
+    details.appendChild(summary);
+    var list = document.createElement('ul');
+    branch.children.forEach(function (child, j) {
+      var item = document.createElement('li');
+      var link = document.createElement('a');
+      link.href = '#content-' + i + '-' + j;
+      link.textContent = child.label;
+      link.addEventListener('click', function (e) { e.preventDefault(); goToContent(i, j); });
+      item.appendChild(link); list.appendChild(item);
+    });
+    details.appendChild(list); listView.appendChild(details);
+  });
+
+  svg.addEventListener('keydown', function (e) {
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].indexOf(e.key) === -1) return;
+    var focusables = Array.prototype.slice.call(svg.querySelectorAll('.mm-branch, .mm-children.open .mm-leaf'));
+    var at = focusables.indexOf(document.activeElement);
+    if (at === -1) return;
+    e.preventDefault();
+    var next = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? at - 1 : at + 1;
+    focusables[(next + focusables.length) % focusables.length].focus();
+  });
 
   // 모든 좌표는 실제 렌더링된 픽셀 위치를 기준으로 계산한다 (반응형 대응)
   function layoutLeaderLines() {
@@ -1039,11 +1178,23 @@
   }
 
   requestAnimationFrame(layoutLeaderLines);
-  var resizeTimer;
-  window.addEventListener('resize', function () {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(layoutLeaderLines, 150);
-  });
+  // 150ms 디바운스는 리사이즈 도중 파란 강조선이 눈에 띄게 뒤처져 보이게 만들었다.
+  // 대신 프레임당 한 번만 실행되도록 rAF로 스케줄링해 화면이 바뀌는 것과 거의 동시에 따라가게 한다.
+  var layoutScheduled = false;
+  function scheduleLayoutLeaderLines() {
+    if (layoutScheduled) return;
+    layoutScheduled = true;
+    requestAnimationFrame(function () {
+      layoutScheduled = false;
+      layoutLeaderLines();
+    });
+  }
+  window.addEventListener('resize', scheduleLayoutLeaderLines);
+  if (typeof ResizeObserver !== 'undefined') {
+    // 창 크기뿐 아니라 마인드맵 컨테이너 자체의 레이아웃이 바뀌는 경우(글꼴 로드,
+    // 콘텐츠 리플로우 등)도 함께 잡아낸다.
+    new ResizeObserver(scheduleLayoutLeaderLines).observe(document.getElementById('mindmap-root'));
+  }
 })();
 </script>
 
