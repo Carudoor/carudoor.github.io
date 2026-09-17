@@ -133,6 +133,13 @@
     r: 5;
     transition: none;
   }
+  .mm-scroll-dot {
+    fill: #fafafa;
+    stroke: var(--mm-accent);
+    stroke-width: 2;
+    opacity: 0.82;
+    transition: cy 0.3s ease, opacity 0.2s ease;
+  }
   /* 클릭할 때마다 새로 만들어지는 강조선. stroke-dashoffset을 통해 실제로
      "그어지는" 움직임을 준다 — 세부 항목 클릭 시 중심→헤더 방향, 헤더 클릭
      시 헤더→중심 방향으로 draw 순서만 반대로 뒤집는다. */
@@ -333,6 +340,7 @@
     .mm-children,
     .mm-connector,
     .mm-spine-dot,
+    .mm-scroll-dot,
     .mm-trace {
       transition: none !important;
     }
@@ -738,6 +746,11 @@
   // 클릭할 때마다 새로 그려지는 강조선(중심 ↔ 헤더). 미리 그려두지 않고,
   // 클릭 시 방향에 맞춰 경로를 만든 뒤 stroke-dashoffset으로 "그어지는" 애니메이션을 준다.
   var traceEl = el('path', { class: 'mm-trace' }, overlay);
+  // 클릭 기반 확정 현재점과 별개로, 읽고 있는 본문 위치를 표시하는 단일 점.
+  var scrollProgressDot = el('circle', {
+    class: 'mm-scroll-dot', r: 3.25, visibility: 'hidden'
+  }, overlay);
+  var scrollCurrentSection = null;
 
   var currentOrder = [];
   for (var oi = 0; oi < n; oi++) currentOrder.push(oi);
@@ -1093,6 +1106,8 @@
       var section = document.createElement('section');
       section.className = 'mm-section';
       section.id = 'content-' + i + '-' + j;
+      section.setAttribute('data-mm-branch', i);
+      section.setAttribute('data-mm-leaf', j);
 
       // <h3>로 제목 시맨틱을 유지하고, 실제 클릭 대상은 그 안의 <button>.
       // (예전처럼 h3에 role="button"을 씌우면 제목 구조가 사라지고
@@ -1189,6 +1204,59 @@
   });
 
   // 모든 좌표는 실제 렌더링된 픽셀 위치를 기준으로 계산한다 (반응형 대응)
+  // 화면 중앙의 좁은 밴드에 들어온 본문을 현재 읽는 섹션으로 삼는다. 콜백은
+  // 이미 배치된 spineDots의 좌표만 읽으며, 레이아웃을 다시 계산하지 않는다.
+  function updateScrollProgressDot(section) {
+    if (!section || !svgMapVisible()) return;
+    var i = Number(section.getAttribute('data-mm-branch'));
+    var j = Number(section.getAttribute('data-mm-leaf'));
+    var sourceDot = spineDots[i] && spineDots[i][j];
+    if (!sourceDot) return;
+
+    var cy = Number(sourceDot.getAttribute('cy'));
+    var spineX = getSpineX();
+    if (!isFinite(cy) || !isFinite(spineX)) return;
+
+    scrollProgressDot.setAttribute('cx', spineX);
+    scrollProgressDot.setAttribute('cy', cy);
+    scrollProgressDot.setAttribute('visibility', 'visible');
+  }
+
+  function setupScrollProgressObserver() {
+    if (typeof IntersectionObserver === 'undefined') return;
+    var sections = Array.prototype.slice.call(contentContainer.querySelectorAll('.mm-section'));
+    var observed = [];
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var index = observed.indexOf(entry.target);
+        if (entry.isIntersecting) {
+          if (index === -1) observed.push(entry.target);
+        } else if (index !== -1) {
+          observed.splice(index, 1);
+        }
+      });
+      if (!observed.length) return;
+
+      var viewportCenter = window.innerHeight / 2;
+      var closest = observed[0];
+      var closestDistance = Infinity;
+      observed.forEach(function (section) {
+        var rect = section.getBoundingClientRect();
+        var distance = Math.abs(rect.top + rect.height / 2 - viewportCenter);
+        if (distance < closestDistance) {
+          closest = section;
+          closestDistance = distance;
+        }
+      });
+      if (closest !== scrollCurrentSection) {
+        scrollCurrentSection = closest;
+        updateScrollProgressDot(closest);
+      }
+    }, { rootMargin: '-45% 0px -45% 0px', threshold: 0 });
+
+    sections.forEach(function (section) { observer.observe(section); });
+  }
+
   function layoutLeaderLines() {
     // Measured from the footer's own position, not document.documentElement.
     // scrollHeight/scrollWidth — those include the overlay's own previous
@@ -1226,9 +1294,15 @@
 
     // 노드/헤더가 움직였으므로 떠 있는 강조선도 새 좌표로 맞춘다.
     refreshHighlightGeometry();
+    // 스크롤 진행 점도 마찬가지 — 리사이즈로 헤더 y좌표가 바뀌면 그 값을
+    // 다시 읽어와야, 다음에 "현재 섹션"이 바뀔 때까지 낡은 위치에 멈춰
+    // 있지 않는다.
+    if (scrollCurrentSection) updateScrollProgressDot(scrollCurrentSection);
   }
 
   requestAnimationFrame(layoutLeaderLines);
+  // 첫 레이아웃 이후에 관찰을 시작해야 spineDots의 cy를 바로 읽을 수 있다.
+  requestAnimationFrame(setupScrollProgressObserver);
   // 150ms 디바운스는 리사이즈 도중 파란 강조선이 눈에 띄게 뒤처져 보이게 만들었다.
   // 대신 프레임당 한 번만 실행되도록 rAF로 스케줄링해 화면이 바뀌는 것과 거의 동시에 따라가게 한다.
   var layoutScheduled = false;
