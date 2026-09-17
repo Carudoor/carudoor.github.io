@@ -24,6 +24,7 @@ function mountSlideDeck(root, options) {
   var manifestUrl = opts.manifestUrl || 'slides/manifest.json';
   var basePath = opts.basePath || 'slides/';
   var useDots = opts.dots !== false;
+  var useFilmstrip = opts.filmstrip === true;
   var useProgress = opts.progress !== false;
   var useKeyboard = opts.keyboard === true;
   var useTabs = opts.tabs !== false;
@@ -63,6 +64,14 @@ function mountSlideDeck(root, options) {
     root.appendChild(dotsWrap);
   }
 
+  var filmstripWrap = null;
+  if (useFilmstrip) {
+    filmstripWrap = document.createElement('div');
+    filmstripWrap.className = 'deck-filmstrip';
+    filmstripWrap.setAttribute('aria-label', '슬라이드 썸네일');
+    root.appendChild(filmstripWrap);
+  }
+
   function makeArrow(cls, label, text) {
     var b = document.createElement('button');
     b.type = 'button';
@@ -84,6 +93,7 @@ function mountSlideDeck(root, options) {
   var decks = [];
   var slides = [];
   var dots = [];
+  var thumbnails = [];
   var current = 0;
 
   // 덱 하나를 이미지 경로 배열로 바꾼다.
@@ -147,8 +157,10 @@ function mountSlideDeck(root, options) {
     // 이전 덱의 슬라이드·점을 걷어낸다
     slides.forEach(function (s) { s.remove(); });
     dots.forEach(function (d) { d.remove(); });
+    thumbnails.forEach(function (thumbnail) { thumbnail.remove(); });
     slides = [];
     dots = [];
+    thumbnails = [];
     current = 0;
 
     deckImages(decks[deckIndex]).forEach(function (src, i) {
@@ -175,6 +187,24 @@ function mountSlideDeck(root, options) {
         dotsWrap.appendChild(dot);
         dots.push(dot);
       }
+
+      if (filmstripWrap) {
+        var thumbnail = document.createElement('button');
+        thumbnail.type = 'button';
+        thumbnail.className = 'deck-thumbnail';
+        thumbnail.setAttribute('aria-label', (i + 1) + '번 슬라이드로 이동');
+
+        var thumbnailImg = document.createElement('img');
+        thumbnailImg.src = src;
+        thumbnailImg.alt = '';
+        thumbnailImg.loading = i < 6 ? 'eager' : 'lazy';
+        thumbnail.appendChild(thumbnailImg);
+        thumbnail.addEventListener('click', (function (idx) {
+          return function () { goTo(idx); };
+        })(i));
+        filmstripWrap.appendChild(thumbnail);
+        thumbnails.push(thumbnail);
+      }
     });
 
     render();
@@ -190,6 +220,16 @@ function mountSlideDeck(root, options) {
       else s.removeAttribute('aria-current');
     });
     dots.forEach(function (d, i) { d.classList.toggle('active', i === current); });
+    thumbnails.forEach(function (thumbnail, i) {
+      var isCurrent = i === current;
+      thumbnail.classList.toggle('active', isCurrent);
+      if (isCurrent) {
+        thumbnail.setAttribute('aria-current', 'true');
+        thumbnail.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      } else {
+        thumbnail.removeAttribute('aria-current');
+      }
+    });
     if (progressFill) {
       progressFill.style.width = (((current + 1) / slides.length) * 100) + '%';
     }
