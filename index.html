@@ -190,6 +190,24 @@
     outline: 2px solid var(--mm-accent);
     outline-offset: 3px;
   }
+  /* "지금 여기" 표시. 오버레이의 스파인 점(mm-spine-dot-current)은 마인드맵
+     SVG가 보일 때만 의미가 있어서, 모바일에서도 항상 통하도록 헤더 자체에
+     같은 역할의 점을 하나 더 둔다. 평소엔 옅은 빈 테두리만 있다가 현재
+     항목일 때만 브랜치 색으로 채워진다. */
+  .mm-current-mark {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 8px;
+    border-radius: 50%;
+    border: 1.5px solid var(--mm-line);
+    background: transparent;
+    vertical-align: middle;
+  }
+  .mm-current-mark.mm-current-mark-active {
+    border-color: var(--mm-accent);
+    background: var(--mm-accent);
+  }
   .mm-section-body {
     margin: 0;
     font-size: 14px;
@@ -293,6 +311,11 @@
   @media (max-width: 600px) {
     body { padding-top: 1.5rem; }
     .mindmap svg { display: none; }
+    /* 스파인/강조선 오버레이는 마인드맵 도면 위에 그려지는 좌표라, 도면이
+       사라진 아코디언 화면에서는 헤더 텍스트와 무관한 위치에 점만 둥둥
+       떠 보인다(예전에 화면 왼쪽 끝에 붙어 있던 원인). 모바일에서는 이
+       오버레이 전체를 끄고, 대신 헤더 옆 .mm-current-mark로 현재 위치를 알린다. */
+    #mm-leader-overlay { display: none; }
     .mindmap-list { display: block; border-top: 1px solid var(--mm-line); }
     .mindmap-list details { border-bottom: 1px solid var(--mm-line); }
     .mindmap-list summary { min-height: 44px; display: flex; align-items: center; padding: 10px 4px; cursor: pointer; font-weight: 600; }
@@ -698,6 +721,7 @@
   var childPaths = [], leafCircles = [], leafLabelEls = [];
   var headerEls = [], spineDots = [];
   var currentSpineDot = null;
+  var currentHeaderMark = null;
   var branchGEls = [], childrenGEls = [];
   var contentContainer = document.getElementById('mm-content');
   contentContainer.setAttribute('tabindex', '-1');
@@ -760,6 +784,13 @@
     if (currentSpineDot) currentSpineDot.classList.remove('mm-spine-dot-current');
     currentSpineDot = spineDots[i] && spineDots[i][j];
     if (currentSpineDot) currentSpineDot.classList.add('mm-spine-dot-current');
+
+    // 헤더 옆 점은 SVG 마인드맵이 보이지 않는 모바일에서도 항상 통하는
+    // "지금 여기" 표시라 스파인 점과 별도로 관리한다.
+    if (currentHeaderMark) currentHeaderMark.classList.remove('mm-current-mark-active');
+    var header = headerEls[i] && headerEls[i][j];
+    currentHeaderMark = header && header.querySelector('.mm-current-mark');
+    if (currentHeaderMark) currentHeaderMark.classList.add('mm-current-mark-active');
   }
 
   // 화면에 실제로 그려진 위치(getBoundingClientRect)를 기준으로 점을 구한다.
@@ -1072,7 +1103,11 @@
       var headerBtn = document.createElement('button');
       headerBtn.type = 'button';
       headerBtn.className = 'mm-section-header-btn';
-      headerBtn.textContent = branch.label + ' · ' + child.label;
+      var currentMark = document.createElement('span');
+      currentMark.className = 'mm-current-mark';
+      currentMark.setAttribute('aria-hidden', 'true');
+      headerBtn.appendChild(currentMark);
+      headerBtn.appendChild(document.createTextNode(branch.label + ' · ' + child.label));
       headerBtn.setAttribute('aria-label', branch.label + ' · ' + child.label + ', 마인드맵으로 돌아가기');
       headerBtn.addEventListener('click', function () { goToMap(i, j); });
       header.appendChild(headerBtn);
