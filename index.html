@@ -836,12 +836,23 @@
     return [r.left + r.width / 2 + window.pageXOffset, r.top + r.height / 2 + window.pageYOffset];
   }
 
+  // .mm-current-mark 자체의 중심 x좌표는 본문 칼럼 안쪽이라, 오버레이보다
+  // 위(z-index:1)에 그려지는 .mm-section의 불투명 배경(#fafafa)에 가려서
+  // 안 보인다(아이폰에서 처음 발견됨 — 사실 브라우저를 가리지 않는 버그).
+  // 데스크톱 스파인처럼 본문 칼럼 바깥 여백에 그려서 그 문제를 피한다.
+  function mobileMarkAnchor(mark) {
+    var r = mark.getBoundingClientRect();
+    var x = Math.max(4, r.left - 10 + window.pageXOffset);
+    var y = r.top + r.height / 2 + window.pageYOffset;
+    return [x, y];
+  }
+
   function layoutMobileTrack() {
     var marks = contentContainer.querySelectorAll('.mm-section-header .mm-current-mark');
     if (!marks.length) return;
 
-    var firstPoint = pointOf(marks[0]);
-    var lastPoint = pointOf(marks[marks.length - 1]);
+    var firstPoint = mobileMarkAnchor(marks[0]);
+    var lastPoint = mobileMarkAnchor(marks[marks.length - 1]);
     mobileTrackX = firstPoint[0];
     mobileTrack.setAttribute('d', 'M ' + mobileTrackX + ' ' + firstPoint[1] + ' L ' + mobileTrackX + ' ' + lastPoint[1]);
   }
