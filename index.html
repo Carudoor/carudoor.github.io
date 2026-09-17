@@ -109,7 +109,13 @@
     position: absolute;
     top: 0;
     left: 0;
-    z-index: 0;
+    /* #mm-content은 z-index:1에 섹션마다 불투명 배경까지 있어서, 오버레이가
+       그보다 낮으면(예전엔 0) 본문 칼럼 "안쪽" 좌표에 그리는 건 전부 가려진다.
+       margin 밖에만 그린다는 전제(데스크톱 스파인)로 버텨왔는데, 모바일
+       여정 선처럼 칼럼 안쪽 좌표(현재 위치 점 옆)에 그려야 하는 경우엔
+       그 전제가 깨진다. pointer-events:none이라 클릭에는 영향 없으니
+       아예 본문보다 위로 올려서 좌표에 상관없이 항상 보이게 한다. */
+    z-index: 2;
     pointer-events: none;
   }
   .mm-spine {
@@ -836,23 +842,17 @@
     return [r.left + r.width / 2 + window.pageXOffset, r.top + r.height / 2 + window.pageYOffset];
   }
 
-  // .mm-current-mark 자체의 중심 x좌표는 본문 칼럼 안쪽이라, 오버레이보다
-  // 위(z-index:1)에 그려지는 .mm-section의 불투명 배경(#fafafa)에 가려서
-  // 안 보인다(아이폰에서 처음 발견됨 — 사실 브라우저를 가리지 않는 버그).
-  // 데스크톱 스파인처럼 본문 칼럼 바깥 여백에 그려서 그 문제를 피한다.
-  function mobileMarkAnchor(mark) {
-    var r = mark.getBoundingClientRect();
-    var x = Math.max(4, r.left - 10 + window.pageXOffset);
-    var y = r.top + r.height / 2 + window.pageYOffset;
-    return [x, y];
-  }
-
   function layoutMobileTrack() {
     var marks = contentContainer.querySelectorAll('.mm-section-header .mm-current-mark');
     if (!marks.length) return;
 
-    var firstPoint = mobileMarkAnchor(marks[0]);
-    var lastPoint = mobileMarkAnchor(marks[marks.length - 1]);
+    // 마크 정중앙을 그대로 쓴다 — 예전엔 이게 본문 칼럼 "안쪽" 좌표라
+    // .mm-section의 불투명 배경에 가려질까봐 여백 쪽으로 옮겼었는데,
+    // (좁은 화면에선 여백이 거의 없어서 그 회피책도 부족했다) 대신
+    // #mm-leader-overlay 자체를 본문보다 위로 올려서 근본적으로 해결했다
+    // (아래 z-index 관련 CSS 주석 참고). 이제 좌표는 그냥 마크 위치 그대로.
+    var firstPoint = pointOf(marks[0]);
+    var lastPoint = pointOf(marks[marks.length - 1]);
     mobileTrackX = firstPoint[0];
     mobileTrack.setAttribute('d', 'M ' + mobileTrackX + ' ' + firstPoint[1] + ' L ' + mobileTrackX + ' ' + lastPoint[1]);
   }
